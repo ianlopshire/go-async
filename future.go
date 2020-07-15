@@ -4,15 +4,14 @@ import (
 	"sync"
 )
 
-// closedchan is a reusable closed channel.
-var closedchan = make(chan struct{})
-
-func init() {
-	close(closedchan)
-}
-
-// Future guards data that will be available at some point in the future.
+// Future is a synchronization primitive that guards data that may be available in the
+// future.
+//
+// NewFuture() is the preferred method of creating a new Future.
 type Future interface {
+
+	// Done returns a channel that is closed when the Future is resolved. It is safe to
+	// call Done multiple times across multiple threads.
 	Done() <-chan struct{}
 }
 
@@ -25,6 +24,8 @@ type future struct {
 }
 
 // NewFuture returns a new future and function that will resolve it.
+//
+// Calling resolve more than once will cause a panic.
 func NewFuture() (Future, ResolveFunc) {
 	f := new(future)
 	return f, f.resolve
@@ -41,14 +42,13 @@ func (f *future) resolve() {
 
 	select {
 	case <-f.done:
-		panic("future is already resolved")
+		panic("async: future is already resolved")
 	default:
 	}
 
 	close(f.done)
 }
 
-// Done returns a channel that's closed once the future is resolved.
 func (f *future) Done() <-chan struct{} {
 	f.mu.Lock()
 	if f.done == nil {
