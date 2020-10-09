@@ -54,7 +54,9 @@ func (f *Future) resolve(fn func()) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
-	fn()
+	if fn != nil {
+		fn()
+	}
 
 	if f.done == nil {
 		f.done = closedchan
