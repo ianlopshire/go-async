@@ -83,31 +83,3 @@ func (f *Future) Done() <-chan struct{} {
 	f.mu.Unlock()
 	return d
 }
-
-// ErrFuture is a future that holds an error.
-type ErrFuture struct {
-	Future
-	Err error
-}
-
-// ResolveErrFuture resolves an ErrFuture with the provided error.
-func ResolveErrFuture(f *ErrFuture, err error) {
-	Resolve(f, func() {
-		f.Err = err
-	})
-}
-
-// ValueFuture is a future that holds an interface{} value and an error.
-type ValueFuture struct {
-	Future
-	Value interface{}
-	Err   error
-}
-
-// ResolveValueFuture resolves a ValueFuture with the provided value and error.
-func ResolveValueFuture(f *ValueFuture, value interface{}, err error) {
-	Resolve(f, func() {
-		f.Value = value
-		f.Err = err
-	})
-}
