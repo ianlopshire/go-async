@@ -10,7 +10,7 @@ Package `async` provides asynchronous primitives and utilities.
 
 `Future` is the main primitive provided by `async`.
 
-`Future` easily embeds into custom future types, but `ErrFuture` and `ValueFuture` are included for convenience.
+`Future` easily embeds into custom future types.
 
 #### Custom Future 
 
@@ -50,44 +50,6 @@ func ExampleFuture_customType() {
 	fmt.Println(userFut.User, userFut.Err)
 	// output: {1 John Does} <nil>
 }
-```
-
-#### Err Future
-
-```go
-fut := new(async.ErrFuture)
-
-// Simulate long computation or IO by sleeping before setting the value and resolving
-// the future.
-go func() {
-	time.Sleep(500 * time.Millisecond)
-	async.ResolveErrFuture(fut, errors.New("there was an error"))
-}()
-
-// Block until the future is resolved.
-async.Await(fut)
-
-fmt.Println(fut.Err)
-// output: there was an error
-```
-
-#### Value Future
-
-```go
-fut := new(async.ValueFuture)
-
-// Simulate long computation or IO by sleeping before setting the value and resolving
-// the future.
-go func() {
-	time.Sleep(500 * time.Millisecond)
-	async.ResolveValueFuture(fut, "Hello World!", nil)
-}()
-
-// Block until the future is resolved.
-async.Await(fut)
-
-fmt.Println(fut.Value, fut.Err)
-// output: Hello World! <nil>
 ```
 
 ## F.A.Q
