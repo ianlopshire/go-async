@@ -13,19 +13,20 @@ type User struct {
 }
 
 type UserFuture struct {
-	async.Future
+	async.Latch
 	User User
 	Err  error
 }
 
-func ResolveUserFuture(f *UserFuture, user User, err error) {
-	async.Resolve(f, func() {
-		f.User, f.Err = user, err
+func ResolveUser(fut *UserFuture, user User, err error) {
+	async.Resolve(fut, func() {
+		fut.User, fut.Err = user, err
 	})
 }
 
-// This example demonstrates how a Future can be easily embedded into a custom type.
-func ExampleFuture_customType() {
+// This example demonstrates how Latch can be embedded into a custom type to create a
+// Future implementation.
+func ExampleLatch_customType() {
 	userFut := new(UserFuture)
 
 	// Simulate long computation or IO by sleeping before and resolving the future.
@@ -33,7 +34,7 @@ func ExampleFuture_customType() {
 		time.Sleep(500 * time.Millisecond)
 		user := User{ID: 1, Name: "John Does"}
 
-		ResolveUserFuture(userFut, user, nil)
+		ResolveUser(userFut, user, nil)
 	}()
 
 	// Block until the future is resolved.

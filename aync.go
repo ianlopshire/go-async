@@ -2,84 +2,48 @@
 package async
 
 import (
-	"sync"
+	"context"
+	"errors"
 )
 
-// closedchan is a reusable closed channel.
-var closedchan = make(chan struct{})
+// ErrAlreadyResolved indicates that a Resolver has already been resolved.
+var ErrAlreadyResolved = errors.New("async: already resolved")
 
-func init() {
-	close(closedchan)
-}
-
-// Awaiter defines the methods that must be implemented to wait on a future.
-//
-// This interface exists so that the Await function can act on custom future types. See
-// ErrFuture and ValueFuture as an Example.
+// Awaiter is an interface that can await a resolution.
 type Awaiter interface {
 	Done() <-chan struct{}
 }
 
-func Await(f Awaiter) {
-	<-f.Done()
+// Await blocks until r is resolved.
+//
+// synonymous with:
+// 	<-a.Done()
+func Await(a Awaiter) {
+	<-a.Done()
 }
 
-// Resolver defines the methods that must be implemented to resolve a future.
+// AwaitCtx blocks until a is resolved or the context is canceled.
+func AwaitCtx(ctx context.Context, a Awaiter) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-a.Done():
+		return nil
+	}
+}
+
+// Resolver is an interface that wraps the unexported resolve method.
 //
-// This interface exists so that the Resolve function can act on custom future types. See
-// ErrFuture and ValueFuture as an Example.
+// It is implemented by Latch and can also be implemented by embedding Latch into a custom
+// type.
 type Resolver interface {
 	resolve(func())
 }
 
-// Resolve resolves a Future and runs fn while the Future is locked.
+// Resolve resolves a Resolver and runs the given function. It is guaranteed that fn will
+// be call at most once.
 //
-// Calling Resolve more than once for a single future will cause a panic.
-//
-// This allows a closure to be created that resolves custom Future types. See
-// ResolveErrFuture and ResolveValueFuture for an example.
-func Resolve(fut Resolver, fn func()) {
-	fut.resolve(fn)
-}
-
-// Future is a primitive intended to be embedded in custom future types. See ErrFuture and
-// ValueFuture for an example.
-type Future struct {
-	mu   sync.Mutex
-	done chan struct{}
-}
-
-// resolve resolves f and runs fn while f is locked.
-func (f *Future) resolve(fn func()) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-
-	if fn != nil {
-		fn()
-	}
-
-	if f.done == nil {
-		f.done = closedchan
-		return
-	}
-
-	select {
-	case <-f.done:
-		panic("async: future is already resolved")
-	default:
-	}
-
-	close(f.done)
-}
-
-// Done returns a channel that is closed when the Future is resolved. It is safe to
-// call Done multiple times across multiple threads.
-func (f *Future) Done() <-chan struct{} {
-	f.mu.Lock()
-	if f.done == nil {
-		f.done = make(chan struct{})
-	}
-	d := f.done
-	f.mu.Unlock()
-	return d
+// Calling Resolve more than once for a single Resolver will panic with ErrAlreadyResolved.
+func Resolve(r Resolver, fn func()) {
+	r.resolve(fn)
 }
