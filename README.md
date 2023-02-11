@@ -8,11 +8,14 @@ Package `async` provides asynchronous primitives and utilities.
 
 ## Usage
 
-`Future` is the main primitive provided by `async`.
+`Latch` is a synchronization primitive that can be used to block until a desired state is reached.
 
-`Future` easily embeds into custom future types.
+The zero value for `Latch` is in an open (blocking) state. Use the package level `Resolve` function to resolve a Latch. Once resolved, the Latch cannot be reopened.
+
 
 #### Custom Future 
+
+`Latch` is useful for implementing Futures.
 
 ```go
 type User struct {
@@ -21,19 +24,20 @@ type User struct {
 }
 
 type UserFuture struct {
-	async.Future
+	async.Latch
 	User User
 	Err  error
 }
 
-func ResolveUserFuture(f *UserFuture, user User, err error) {
-	async.Resolve(f, func() {
-		f.User, f.Err = user, err
+func ResolveUser(fut *UserFuture, user User, err error) {
+	async.Resolve(fut, func() {
+		fut.User, fut.Err = user, err
 	})
 }
 
-// This example demonstrates how a Future can be easily embedded into a custom type.
-func ExampleFuture_customType() {
+// This example demonstrates how Latch can be embedded into a custom type to create a
+// Future implementation.
+func ExampleLatch_customType() {
 	userFut := new(UserFuture)
 
 	// Simulate long computation or IO by sleeping before and resolving the future.
@@ -41,7 +45,7 @@ func ExampleFuture_customType() {
 		time.Sleep(500 * time.Millisecond)
 		user := User{ID: 1, Name: "John Does"}
 
-		ResolveUserFuture(userFut, user, nil)
+		ResolveUser(userFut, user, nil)
 	}()
 
 	// Block until the future is resolved.
@@ -63,9 +67,9 @@ code that some would consider easier to understand and maintain.
 At the end of the day, a lot of it comes down to preference. If you and your team don't
 like using futures, simply don't use them.
 
-> Why is `Resolve` a function instead of a method of `Future`.
+> Why is `Resolve` a function instead of a method of `Latch`.
 
-Custom future types embed the `Future` primitive. If `Resolve` was a method of `Future` it
+Custom future types embed the `Latch` primitive. If `Resolve` was a method of `Latch` it
 would be exported for every custom future type. Implementing `Resolve` as a package level
 function allows implementors of custom future types to choose how to expose resolution
 (if at all).
